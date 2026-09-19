@@ -1,8 +1,8 @@
 # =============================================================================
-#  Console d'administration de l'enclave — déploiement
+#  Console d'administration de l'enclave sécurisée — INSTAD
 #
 #  L'image ne contient AUCUN secret. Tout ce qui est sensible est monté ou
-#  injecté à l'exécution : jeton Proxmox, clés SSH des agents, ADMIN_SECRET.
+#  injecté à l'exécution : jeton Proxmox, clés des agents, ADMIN_SECRET.
 # =============================================================================
 services:
   admin:
@@ -12,28 +12,42 @@ services:
 
     environment:
       ADMIN_PORT: 8090
+      ADMIN_HOTE: 0.0.0.0
       # Signature des cookies de session. DOIT être fixe : régénéré à chaque
       # démarrage, toutes les sessions d'administration tomberaient.
       ADMIN_SECRET: ${ADMIN_SECRET:?definir ADMIN_SECRET dans .env}
-      PROXMOX_TOKEN: ${PROXMOX_TOKEN:?definir PROXMOX_TOKEN}
+      PROXMOX_TOKEN: ${PROXMOX_TOKEN:?definir PROXMOX_TOKEN dans .env}
       PROXMOX_URL: ${PROXMOX_URL:-https://10.0.20.1:8006/api2/json}
       VMID_MODELE: ${VMID_MODELE:-9002}
+      # Les agents contraints sont joints en SSH par commande forcée.
+      AGENT_SAMBA_HOTE: ${AGENT_SAMBA_HOTE:-enclave-samba@10.0.30.3}
+      AGENT_SAMBA_CLE: /home/enclave/.ssh/enclave-samba-agent
+      AGENT_SNIPPET_HOTE: ${AGENT_SNIPPET_HOTE:-enclave-agent@10.0.20.1}
+      AGENT_SNIPPET_CLE: /home/enclave/.ssh/enclave-snippet-agent
       # Dette du prototype : certificat Proxmox auto-signé.
       NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
 
     volumes:
-      # Registre des accès et journal d'audit : doivent survivre au conteneur.
-      - ./etat:/app/etat
-      # L'orchestrateur, en LECTURE SEULE : la console l'utilise, ne le modifie pas.
-      - /opt/enclave/orchestrateur/services:/opt/enclave/orchestrateur/services:ro
+      # Comptes d'administration et journal d'audit : doivent survivre au
+      # conteneur. Le dossier hôte appartient à l'uid 10001 de l'image.
+      - /opt/enclave/admin/etat:/app/etat
+      # Registre des accès, PARTAGÉ avec l'orchestrateur : la console y écrit
+      # (provisionnement), le portail le lit (porte « actif »).
       - /opt/enclave/orchestrateur/etat:/opt/enclave/orchestrateur/etat
-      # Clés des agents contraints, en lecture seule.
-      - ${CLES_SSH:-~/.ssh}:/home/enclave/.ssh:ro
+      # Code de l'orchestrateur, en lecture seule : la console l'utilise,
+      # elle ne le modifie pas.
+      - /opt/enclave/orchestrateur/services:/opt/enclave/orchestrateur/services:ro
+      # Clés des agents + known_hosts figé (le montage étant en lecture seule,
+      # ssh ne pourrait pas écrire known_hosts lui-même).
+      - /opt/enclave/admin/cles:/home/enclave/.ssh:ro
 
-    # Exposé sur la boucle locale seulement : Nginx fait face au réseau et
-    # restreint par IP (voir deploiement-nginx.conf).
+    # Boucle locale seulement : Nginx fait face au réseau et restreint par IP.
     ports:
       - "127.0.0.1:8090:8090"
 
     security_opt:
       - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }

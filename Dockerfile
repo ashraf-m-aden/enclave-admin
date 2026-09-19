@@ -26,7 +26,10 @@ FROM node:22-alpine
 # tini : sans lui, Node tourne en PID 1 et n'y reçoit pas SIGTERM — le
 # conteneur mettrait dix secondes à s'arrêter, à chaque fois.
 # openssh-client : l'API parle aux agents contraints par commande forcée SSH.
-RUN apk add --no-cache tini openssh-client
+# openssl : produit l'empreinte SHA-512-crypt ($6$) du mot de passe d'un
+#   chercheur. Node ne sait pas la calculer — `scrypt` est un autre format —
+#   et on n'écrit pas de cryptographie maison pour combler l'écart.
+RUN apk add --no-cache tini openssh-client openssl
 
 WORKDIR /app
 
