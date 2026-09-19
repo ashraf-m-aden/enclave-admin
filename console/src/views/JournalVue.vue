@@ -29,6 +29,7 @@ const libelles: Record<string, string> = {
   'reinitialisation-second-facteur': 'RÉINITIALISATION DU SECOND FACTEUR',
   'reinitialisation-annulee': 'Réinitialisation annulée',
   'chercheur-notifie': 'Chercheur notifié',
+  'changement-application': "Changement d'application",
 }
 
 function libelle(action: string) {

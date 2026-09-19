@@ -21,6 +21,17 @@ export interface Acces {
   /** L'agent a vérifié que le mot de passe posé authentifie réellement. */
   auth_verifiee: boolean
   provisionne_le: string | null
+  /** Application lancée à l'ouverture de session. */
+  application: string
+}
+
+/** Une application du catalogue de session. */
+export interface Application {
+  cle: string
+  nom: string
+  detail: string
+  /** Réellement installée dans le modèle courant. */
+  disponible: boolean
 }
 
 /** Une session vivante, c'est-à-dire un clone jetable en cours. */

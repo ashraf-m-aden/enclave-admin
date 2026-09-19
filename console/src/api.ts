@@ -8,7 +8,7 @@
  */
 
 import type {
-  Acces, Administrateur, DemandeReenrolement, Espace, EvenementJournal, Fichier,
+  Acces, Administrateur, Application, DemandeReenrolement, Espace, EvenementJournal, Fichier,
   Infrastructure, Reconciliation, Session,
 } from '@/types'
 
@@ -74,6 +74,15 @@ export const api = {
 
   revoquer: (identifiant: string) =>
     appeler<{ ok: true }>(`/acces/${encodeURIComponent(identifiant)}`, { method: 'DELETE' }),
+
+  applications: () => appeler<{ applications: Application[] }>('/applications'),
+
+  /** Change l'application lancée à l'ouverture. Effet à la session suivante. */
+  definirApplication: (identifiant: string, application: string) =>
+    appeler<{ identifiant: string; application: string }>(
+      `/acces/${encodeURIComponent(identifiant)}/application`, {
+        method: 'PATCH', body: JSON.stringify({ application }),
+      }),
 
   reconciliation: () => appeler<{ rapport: Reconciliation }>('/reconciliation'),
 

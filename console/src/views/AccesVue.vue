@@ -3,9 +3,15 @@ import { onMounted, ref } from 'vue'
 import { api } from '@/api'
 import { useEnclaveStore } from '@/stores/enclave'
 import { dateCourte, motDePasseSuggere } from '@/utils'
-import type { Acces } from '@/types'
+import type { Acces, Application } from '@/types'
 
 const enclave = useEnclaveStore()
+
+/**
+ * Applications proposées. Une session ouvre UNE application, sans bureau :
+ * c'est un choix, pas une liste à cocher.
+ */
+const applications = ref<Application[]>([])
 
 const formulaireOuvert = ref(false)
 const identifiant = ref('')
@@ -86,7 +92,25 @@ async function revoquer(acces: Acces) {
   }
 }
 
-onMounted(() => enclave.chargerAcces())
+/** Le changement prend effet à la session suivante, pas sur une session ouverte. */
+async function changerApplication(acces: Acces, cle: string) {
+  if (cle === acces.application) return
+  erreur.value = null
+  try {
+    await api.definirApplication(acces.identifiant, cle)
+    await enclave.chargerAcces()
+  } catch (e) {
+    erreur.value = (e as Error).message
+    await enclave.chargerAcces()
+  }
+}
+
+onMounted(async () => {
+  await enclave.chargerAcces()
+  try {
+    applications.value = (await api.applications()).applications
+  } catch { /* le catalogue n'est pas indispensable à l'affichage */ }
+})
 </script>
 
 <template>
@@ -162,6 +186,13 @@ onMounted(() => enclave.chargerAcces())
     </section>
 
     <!-- Liste -->
+    <p class="message message--info">
+      Une session ouvre <strong>une seule application</strong>, sans bureau :
+      ni menu, ni gestionnaire de fichiers, ni terminal. Changer l'application
+      prend effet à la <strong>session suivante</strong> — une session en cours
+      n'est pas interrompue.
+    </p>
+
     <section class="bloc">
       <div class="bloc__entete">
         <h2>Accès enregistrés</h2>
@@ -179,6 +210,7 @@ onMounted(() => enclave.chargerAcces())
               <th>Identifiant</th>
               <th>État</th>
               <th>Authentification</th>
+              <th>Application</th>
               <th>Mot de passe posé le</th>
               <th></th>
             </tr>
@@ -195,6 +227,18 @@ onMounted(() => enclave.chargerAcces())
               <td>
                 <span v-if="a.auth_verifiee" class="pastille pastille--ok">vérifiée</span>
                 <span v-else class="pastille pastille--neutre">non vérifiée</span>
+              </td>
+              <td>
+                <select
+                  class="appli"
+                  :value="a.application"
+                  :disabled="a.etat !== 'actif'"
+                  @change="changerApplication(a, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="ap in applications" :key="ap.cle" :value="ap.cle">
+                    {{ ap.nom }}{{ ap.disponible ? '' : ' — non installée' }}
+                  </option>
+                </select>
               </td>
               <td class="mono">{{ dateCourte(a.mdp_pose_le) }}</td>
               <td class="actions">
@@ -302,5 +346,19 @@ onMounted(() => enclave.chargerAcces())
   gap: $r-2;
   justify-content: flex-end;
   white-space: nowrap;
+}
+
+.appli {
+  padding: 5px 8px;
+  border: 1px solid $rule;
+  border-radius: $rayon-s;
+  font-family: inherit;
+  font-size: 12.5px;
+  background: $white;
+  color: $ink;
+  max-width: 190px;
+
+  &:disabled { opacity: 0.5; }
+  &:focus { border-color: $blue-600; outline: none; }
 }
 </style>

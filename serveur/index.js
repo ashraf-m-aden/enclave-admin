@@ -25,6 +25,7 @@ const session = require(path.join(ORCHESTRATEUR, 'session'));
 const { connecter, garde, lireComptes } = require('./auth');
 const journal = require('./journal');
 const reenrolement = require('./reenrolement');
+const applications = require('./applications');
 
 const app = express();
 app.set('trust proxy', 'loopback');   // Nginx pose X-Forwarded-For
@@ -94,6 +95,8 @@ app.get('/api/acces', garde, route(async (req, res) => {
     mdp_pose_le: e.mdp_pose_le || null,
     auth_verifiee: e.auth_verifiee === true,
     provisionne_le: e.provisionne_le || e.demande_le || null,
+    // Application lancée à l'ouverture de session.
+    application: e.application || 'rstudio',
     // L'empreinte n'est JAMAIS renvoyée à la console.
   }));
   acces.sort((a, b) => a.identifiant.localeCompare(b.identifiant));
@@ -150,6 +153,34 @@ app.delete('/api/acces/:identifiant', garde, route(async (req, res) => {
   }
   journal.consigner(req, 'revocation', { identifiant });
   res.json({ ok: true });
+}));
+
+/** Catalogue des applications, avec leur disponibilité réelle dans le modèle. */
+app.get('/api/applications', garde, route(async (req, res) => {
+  res.json({ applications: applications.lire() });
+}));
+
+/**
+ * Change l'application lancée à l'ouverture de session.
+ *
+ * Elle s'applique à la SESSION SUIVANTE : une session en cours n'est pas
+ * interrompue. Le choix voyage ensuite jusqu'au clone par le snippet, où
+ * l'agent le revalide contre sa propre liste blanche.
+ */
+app.patch('/api/acces/:identifiant/application', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+  const { application } = req.body || {};
+
+  if (!applications.valide(application)) {
+    return res.status(400).json({ erreur: 'application inconnue du catalogue' });
+  }
+  if (!provisionnement.estActif(identifiant)) {
+    return res.status(409).json({ erreur: "cet accès n'est pas actif" });
+  }
+
+  provisionnement.definirApplication(identifiant, application);
+  journal.consigner(req, 'changement-application', { identifiant, application });
+  res.json({ identifiant, application });
 }));
 
 /**
