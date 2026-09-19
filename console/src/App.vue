@@ -14,6 +14,7 @@ const liens = [
   { nom: 'tableau-de-bord', libelle: "Vue d'ensemble" },
   { nom: 'acces', libelle: 'Accès chercheurs' },
   { nom: 'sessions', libelle: 'Sessions en cours' },
+  { nom: 'donnees', libelle: 'Données' },
   { nom: 'sorties', libelle: 'Circuit de sortie' },
   { nom: 'second-facteur', libelle: 'Second facteur' },
   { nom: 'reconciliation', libelle: 'Réconciliation' },

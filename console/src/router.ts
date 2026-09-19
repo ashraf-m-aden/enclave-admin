@@ -9,6 +9,7 @@ const routes = [
   { path: '/sessions', name: 'sessions', component: () => import('@/views/SessionsVue.vue'), meta: { titre: 'Sessions en cours' } },
   { path: '/second-facteur', name: 'second-facteur', component: () => import('@/views/SecondFacteurVue.vue'), meta: { titre: 'Second facteur' } },
   { path: '/reconciliation', name: 'reconciliation', component: () => import('@/views/ReconciliationVue.vue'), meta: { titre: 'Réconciliation' } },
+  { path: '/donnees', name: 'donnees', component: () => import('@/views/DonneesVue.vue'), meta: { titre: "Données des chercheurs" } },
   { path: '/sorties', name: 'sorties', component: () => import('@/views/SortiesVue.vue'), meta: { titre: 'Circuit de sortie' } },
   { path: '/administrateurs', name: 'administrateurs', component: () => import('@/views/AdministrateursVue.vue'), meta: { titre: 'Administrateurs' } },
   { path: '/journal', name: 'journal', component: () => import('@/views/JournalVue.vue'), meta: { titre: "Journal d'audit" } },

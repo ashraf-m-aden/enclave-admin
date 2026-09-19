@@ -33,6 +33,15 @@ const app = express();
 app.set('trust proxy', 'loopback');   // Nginx pose X-Forwarded-For
 app.use(express.json({ limit: '64kb' }));
 
+// Plafond du corps pour le SEUL depot de donnees. Le base64 gonfle de 4/3 :
+// 140 Mo de corps correspondent a environ 100 Mo de fichier, ce que l'agent
+// accepte. Au-dela, deposer le fichier directement sur le serveur de
+// fichiers — la recette decrit la procedure au chapitre 02.
+//
+// Ce plafond ne vaut QUE sur /api/donnees/:identifiant. Partout ailleurs,
+// 64 ko suffisent, et un corps genereux serait une invitation.
+const DEPOT_MAX_CORPS = process.env.DEPOT_MAX_CORPS || '140mb';
+
 // ---------------------------------------------------------------------------
 // Interface de la console, servie DEPUIS LE CONTENEUR
 //
@@ -367,6 +376,70 @@ app.get('/api/infrastructure', garde, route(async (req, res) => {
     plage_clones: `${pve.CONFIG.vmidMin}-${pve.CONFIG.vmidMax}`,
     noeud: pve.CONFIG.node,
   });
+}));
+
+
+// ---------------------------------------------------------------------------
+// Circuit d'ENTREE — les donnees sources, chercheur par chercheur
+//
+// Un chercheur n'est habilite que sur les donnees de son projet. Le partage
+// « donnees » a pour racine /srv/partage/donnees/%U : la racine EST son
+// dossier, il ne peut donc meme pas nommer celui d'un autre.
+//
+// L'administrateur depose et retire ; le chercheur ne fait que lire.
+// ---------------------------------------------------------------------------
+
+/**
+ * Depose un fichier de donnees pour UN chercheur.
+ *
+ * Le contenu arrive en base64 dans le corps JSON. La limite d'Express est
+ * relevee sur CETTE route seulement : ailleurs, un corps de 16 ko suffit
+ * largement, et un plafond genereux partout serait une invitation.
+ */
+app.post('/api/donnees/:identifiant',
+  garde,
+  express.json({ limit: DEPOT_MAX_CORPS }),
+  route(async (req, res) => {
+    const { identifiant } = req.params;
+    const { fichier, contenu_b64 } = req.body || {};
+    if (!fichier || !contenu_b64) {
+      return res.status(400).json({ erreur: 'fichier et contenu_b64 requis' });
+    }
+
+    let r;
+    try {
+      r = await provisionnement.appelerAgent({
+        action: 'deposer-fichier', username: identifiant,
+        espace: 'donnees', fichier, contenu_b64,
+      });
+    } catch (e) {
+      journal.consignerEchec(req, 'depot-donnees', e.message, { identifiant, fichier });
+      return res.status(409).json({ erreur: e.message });
+    }
+
+    // Qui a donne acces a quelle donnee, et quand : c'est la contrepartie
+    // exacte de la journalisation des sorties.
+    journal.consigner(req, 'depot-donnees', {
+      identifiant, fichier: r.fichier, taille: r.taille,
+    });
+    res.json({ ok: true, fichier: r.fichier, taille: r.taille });
+  }));
+
+/** Retire un fichier de donnees. Ne s'applique qu'a « donnees ». */
+app.delete('/api/donnees/:identifiant/:fichier', garde, route(async (req, res) => {
+  const { identifiant, fichier } = req.params;
+  let r;
+  try {
+    r = await provisionnement.appelerAgent({
+      action: 'retirer-fichier', username: identifiant,
+      espace: 'donnees', fichier,
+    });
+  } catch (e) {
+    journal.consignerEchec(req, 'retrait-donnees', e.message, { identifiant, fichier });
+    return res.status(404).json({ erreur: e.message });
+  }
+  journal.consigner(req, 'retrait-donnees', { identifiant, fichier, taille: r.taille });
+  res.json({ ok: true });
 }));
 
 

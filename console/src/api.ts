@@ -119,6 +119,17 @@ export const api = {
    * navigateur plutôt que par `fetch` : le téléchargement garde ainsi son
    * nom de fichier, et le contenu ne transite pas par la mémoire de la page.
    */
+  /** Dépose un fichier de données pour un chercheur. Contenu en base64. */
+  deposerDonnees: (identifiant: string, fichier: string, contenu_b64: string) =>
+    appeler<{ ok: true; fichier: string; taille: number }>(
+      `/donnees/${encodeURIComponent(identifiant)}`,
+      { method: 'POST', body: JSON.stringify({ fichier, contenu_b64 }) }),
+
+  retirerDonnees: (identifiant: string, fichier: string) =>
+    appeler<{ ok: true }>(
+      `/donnees/${encodeURIComponent(identifiant)}/${encodeURIComponent(fichier)}`,
+      { method: 'DELETE' }),
+
   urlFichier: (identifiant: string, espace: Espace, fichier: string) =>
     `/api/fichiers/${encodeURIComponent(identifiant)}/${espace}/${encodeURIComponent(fichier)}`,
 

@@ -92,7 +92,15 @@ export interface Fichier {
   recuperable: boolean
 }
 
-export type Espace = 'sorties' | 'travaux'
+/**
+ * Les espaces d'un chercheur.
+ *
+ * `donnees` est en LECTURE pour la console comme pour le chercheur, mais
+ * c'est le seul où l'administrateur puisse ÉCRIRE : déposer dans `travaux`
+ * rendrait un fichier indiscernable du travail du chercheur, et déposer dans
+ * `sorties` fausserait la piste de validation. L'agent refuse les deux.
+ */
+export type Espace = 'sorties' | 'travaux' | 'donnees'
 
 /**
  * Demande de réinitialisation du second facteur d'un chercheur.
