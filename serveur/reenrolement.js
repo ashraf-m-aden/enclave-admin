@@ -225,7 +225,32 @@ async function lister() {
   return sortie;
 }
 
+/**
+ * Efface le second facteur d'un compte dont l'acces vient d'etre revoque.
+ *
+ * La console ne lit ni n'ecrit JAMAIS un secret TOTP : elle demande au
+ * portail, seul proprietaire, de le detruire. La separation tient.
+ *
+ * Ne leve pas si le portail est injoignable : une revocation d'acces ne doit
+ * pas echouer a cause de cela — le compte Samba et le registre sont deja
+ * retires, ce qui suffit a bloquer l'acces. L'echec est signale a l'appelant
+ * pour qu'il le porte au journal.
+ *
+ * @returns {{ok: boolean, efface?: boolean, erreur?: string}}
+ */
+async function purgerSecondFacteur(identifiant) {
+  try {
+    const r = await appelerPortail(
+      `/interne/second-facteur/${encodeURIComponent(identifiant)}`,
+      { method: 'DELETE' });
+    return { ok: true, efface: r.efface === true };
+  } catch (e) {
+    return { ok: false, erreur: e.message };
+  }
+}
+
 module.exports = {
+  purgerSecondFacteur,
   demander, approuver, annuler, marquerNotifie, lister,
   doubleControleApplicable, PEREMPTION_MS,
 };

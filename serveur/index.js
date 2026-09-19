@@ -224,8 +224,26 @@ app.delete('/api/acces/:identifiant', garde, route(async (req, res) => {
             + 'Le travail du chercheur doit être traité avant de révoquer.',
     });
   }
-  journal.consigner(req, 'revocation', { identifiant });
-  res.json({ ok: true });
+  // L'acces est retire ; le second facteur doit partir avec lui. Sans cela,
+  // recreer plus tard le meme identifiant donnerait un compte DEJA enrole,
+  // avec le secret de l'ancien titulaire : le nouveau chercheur ne pourrait
+  // pas se connecter, et l'ancien garderait un facteur valide.
+  const purge = await reenrolement.purgerSecondFacteur(identifiant);
+
+  journal.consigner(req, 'revocation', {
+    identifiant,
+    second_facteur: purge.ok ? (purge.efface ? 'efface' : 'aucun') : 'ECHEC',
+    ...(purge.ok ? {} : { erreur_purge: purge.erreur }),
+  });
+
+  // La revocation a bien eu lieu — compte Samba et registre retires — mais si
+  // la purge a echoue, l'administrateur doit le savoir et la rejouer.
+  res.json({
+    ok: true,
+    second_facteur_efface: purge.ok ? purge.efface : null,
+    avertissement: purge.ok ? undefined
+      : `acces revoque, mais le second facteur n'a PAS pu etre efface : ${purge.erreur}`,
+  });
 }));
 
 /** Catalogue des applications, avec leur disponibilité réelle dans le modèle. */
