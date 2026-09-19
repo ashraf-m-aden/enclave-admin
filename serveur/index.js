@@ -33,10 +33,25 @@ const app = express();
 app.set('trust proxy', 'loopback');   // Nginx pose X-Forwarded-For
 app.use(express.json({ limit: '64kb' }));
 
-// La console est servie en statique par Nginx ; l'API ne répond qu'en JSON.
+// ---------------------------------------------------------------------------
+// Interface de la console, servie DEPUIS LE CONTENEUR
+//
+// Auparavant Nginx la servait depuis le disque de la passerelle. Il existait
+// donc deux copies — celle de l'image et celle de l'hôte — et reconstruire
+// l'image mettait à jour l'API sans toucher l'interface : le tableau de bord
+// était invisible alors qu'il était déployé.
+//
+// Une seule copie, livrée avec le code qui la sert : les deux ne peuvent plus
+// diverger.
+// ---------------------------------------------------------------------------
+
+const CONSOLE = process.env.CONSOLE_CHEMIN || path.join(__dirname, 'console');
+
 app.use((req, res, suite) => {
   res.set('X-Content-Type-Options', 'nosniff');
-  res.set('Cache-Control', 'no-store');
+  // Les réponses de l'API ne doivent jamais être mises en cache ; les fichiers
+  // de l'interface, si — ils portent une empreinte dans leur nom.
+  if (req.path.startsWith('/api/')) res.set('Cache-Control', 'no-store');
   suite();
 });
 
@@ -479,6 +494,23 @@ app.get('/api/journal', garde, route(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------------------
+
+// --- Interface ---------------------------------------------------------------
+// Déclarée APRÈS les routes d'API : une route inconnue sous /api/ doit
+// répondre en JSON, pas renvoyer la page.
+
+app.use('/assets', express.static(path.join(CONSOLE, 'assets'), {
+  immutable: true,
+  maxAge: '1y',       // le nom porte une empreinte : le contenu ne change jamais
+}));
+
+app.use(express.static(CONSOLE, { index: false }));
+
+app.use((req, res, suite) => {
+  if (req.path.startsWith('/api/')) return suite();
+  // Routeur en mode history : toute autre adresse rend la page, qui décide.
+  res.sendFile(path.join(CONSOLE, 'index.html'), (e) => { if (e) suite(); });
+});
 
 app.use((req, res) => res.status(404).json({ erreur: 'route inconnue' }));
 
