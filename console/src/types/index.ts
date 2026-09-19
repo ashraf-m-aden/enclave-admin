@@ -117,3 +117,65 @@ export interface DemandeReenrolement {
   canal?: string | null
   etat_ticket?: { utilise: boolean; expire: boolean; expire_le: string } | null
 }
+
+/** État de l'enclave : ce que le tableau de bord affiche. */
+export interface EtatEnclave {
+  noeud: {
+    nom?: string
+    memoire_totale_go?: number
+    memoire_utilisee_go?: number
+    memoire_libre_go?: number
+    memoire_pourcent?: number
+    cpu_pourcent?: number
+    cpu_coeurs?: number | null
+    charge?: number | null
+    uptime_h?: number
+    erreur?: string
+  } | null
+  stockage: {
+    nom?: string
+    total_go?: number
+    utilise_go?: number
+    disponible_go?: number
+    pourcent?: number
+    erreur?: string
+  } | null
+  sessions: Array<{
+    vmid: number
+    nom: string
+    statut: string
+    uptime_s: number
+    memoire_mo: number | null
+    cpu_pourcent: number
+    disque_mo: number | null
+  }>
+  capacite: {
+    sessions_en_cours: number
+    memoire_par_clone_mo: number
+    cout_disque_par_clone_go: number
+    /** Le plus bas des trois plafonds : c'est lui qui compte. */
+    demarrables: number
+    plafond_memoire: number
+    plafond_stockage: number
+    plafond_plage: number
+    facteur_limitant: string
+    limite_atteinte: boolean
+    alerte_stockage: boolean
+    alerte_memoire: boolean
+  } | null
+  surveillance: {
+    sessions: Array<{
+      vmid: number
+      duree_s: number
+      active: boolean
+      derniere_activite_s: number | null
+      debit_octets_min: number | null
+    }>
+    reglages: {
+      inactivite_min: number
+      accueil_min: number
+      duree_max_h: number
+      seuil_octets_min: number
+    }
+  } | null
+}

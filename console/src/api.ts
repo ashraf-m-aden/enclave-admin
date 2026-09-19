@@ -9,7 +9,7 @@
 
 import type {
   Acces, Administrateur, Application, DemandeReenrolement, Espace, EvenementJournal, Fichier,
-  Infrastructure, Reconciliation, Session,
+  EtatEnclave, Infrastructure, Reconciliation, Session,
 } from '@/types'
 
 export class ErreurApi extends Error {
@@ -128,6 +128,8 @@ export const api = {
       }),
 
   // Supervision
+  etat: () => appeler<EtatEnclave>('/etat'),
+
   infrastructure: () => appeler<Infrastructure>('/infrastructure'),
 
   journal: (limite = 200) =>

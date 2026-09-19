@@ -26,6 +26,7 @@ const { connecter, garde, lireComptes } = require('./auth');
 const journal = require('./journal');
 const reenrolement = require('./reenrolement');
 const applications = require('./applications');
+const capacite = require('./capacite');
 
 const app = express();
 app.set('trust proxy', 'loopback');   // Nginx pose X-Forwarded-For
@@ -221,6 +222,14 @@ app.delete('/api/sessions/:vmid', garde, route(async (req, res) => {
 // ---------------------------------------------------------------------------
 // Infrastructure
 // ---------------------------------------------------------------------------
+
+/**
+ * État complet de l'enclave : mémoire, stockage, sessions, capacité.
+ * C'est la source du tableau de bord.
+ */
+app.get('/api/etat', garde, route(async (req, res) => {
+  res.json(await capacite.etat());
+}));
 
 app.get('/api/infrastructure', garde, route(async (req, res) => {
   const clones = await pve.listerClones();

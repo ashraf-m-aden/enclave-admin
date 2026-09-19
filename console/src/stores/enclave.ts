@@ -7,13 +7,14 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/api'
-import type { Acces, EvenementJournal, Infrastructure, Reconciliation, Session } from '@/types'
+import type { Acces, EtatEnclave, EvenementJournal, Infrastructure, Reconciliation, Session } from '@/types'
 
 export const useEnclaveStore = defineStore('enclave', () => {
   const acces = ref<Acces[]>([])
   const sessions = ref<Session[]>([])
   const reconciliation = ref<Reconciliation | null>(null)
   const infrastructure = ref<Infrastructure | null>(null)
+  const etatEnclave = ref<EtatEnclave | null>(null)
   const journal = ref<EvenementJournal[]>([])
 
   const chargement = ref(false)
@@ -52,6 +53,11 @@ export const useEnclaveStore = defineStore('enclave', () => {
     if (r) reconciliation.value = r.rapport
   }
 
+  async function chargerEtat() {
+    const r = await envelopper(api.etat())
+    if (r) etatEnclave.value = r
+  }
+
   async function chargerInfrastructure() {
     const r = await envelopper(api.infrastructure())
     if (r) infrastructure.value = r
@@ -67,7 +73,7 @@ export const useEnclaveStore = defineStore('enclave', () => {
     chargement.value = true
     try {
       await Promise.all([
-        chargerAcces(), chargerSessions(), chargerInfrastructure(),
+        chargerAcces(), chargerSessions(), chargerEtat(),
       ])
     } finally {
       chargement.value = false
@@ -75,10 +81,10 @@ export const useEnclaveStore = defineStore('enclave', () => {
   }
 
   return {
-    acces, sessions, reconciliation, infrastructure, journal,
+    acces, sessions, reconciliation, infrastructure, etatEnclave, journal,
     chargement, erreur,
     accesActifs, accesIncomplets, aSignaler,
     chargerAcces, chargerSessions, chargerReconciliation,
-    chargerInfrastructure, chargerJournal, toutCharger,
+    chargerInfrastructure, chargerEtat, chargerJournal, toutCharger,
   }
 })
