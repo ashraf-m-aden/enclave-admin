@@ -9,6 +9,7 @@
 export interface Administrateur {
   identifiant: string
   nom: string
+  cree_le?: string
 }
 
 /** Un accès chercheur, tel que le registre local le décrit. */
@@ -75,6 +76,7 @@ export interface EvenementJournal {
   vmid?: number
   espace?: string
   fichier?: string
+  compte?: string
   taille?: number
   nombre?: number
 }

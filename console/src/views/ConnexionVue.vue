@@ -30,7 +30,7 @@ async function soumettre() {
       <img class="boite__logo" src="/logo.png" alt="INSTAD — Institut de la Statistique de Djibouti" />
 
       <div class="boite__titre">
-        <h1>Console de l'enclave</h1>
+        <h1>Console</h1>
         <p>Administration des accès et supervision des sessions</p>
       </div>
 

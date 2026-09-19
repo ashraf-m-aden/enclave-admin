@@ -30,6 +30,10 @@ const libelles: Record<string, string> = {
   'reinitialisation-annulee': 'Réinitialisation annulée',
   'chercheur-notifie': 'Chercheur notifié',
   'changement-application': "Changement d'application",
+  'admin-cree': "Création d'un administrateur",
+  'admin-supprime': "Suppression d'un administrateur",
+  'admin-mot-de-passe-change': "Mot de passe d'administrateur changé",
+  'orphelin-supprime': "Suppression d'un orphelin",
 }
 
 function libelle(action: string) {
@@ -39,6 +43,7 @@ function libelle(action: string) {
 /** Ce sur quoi l'action a porté : un accès, un clone, ou un fichier. */
 function objet(e: EvenementJournal) {
   if (e.fichier) return `${e.identifiant} · ${e.espace}/${e.fichier}`
+  if (e.compte) return e.compte
   if (e.identifiant) return e.identifiant
   if (e.vmid) return `VMID ${e.vmid}`
   return '—'

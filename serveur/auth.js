@@ -161,7 +161,17 @@ function garde(req, res, suite) {
   suite();
 }
 
+/** Supprime un compte d'administration. Les garde-fous — dernier compte,
+ *  auto-suppression — sont appliqués par l'appelant, qui connaît la session. */
+function supprimerAdministrateur(identifiant) {
+  const comptes = lireComptes();
+  if (!comptes[identifiant]) throw new Error('compte inconnu');
+  delete comptes[identifiant];
+  ecrireComptes(comptes);
+  return true;
+}
+
 module.exports = {
-  connecter, garde, creerAdministrateur, lireComptes,
+  connecter, garde, creerAdministrateur, supprimerAdministrateur, lireComptes,
   empreinte, verifierEmpreinte, DUREE_SESSION_MS,
 };

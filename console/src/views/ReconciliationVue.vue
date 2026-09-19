@@ -1,10 +1,47 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { api } from '@/api'
 import { useEnclaveStore } from '@/stores/enclave'
 import { dateCourte } from '@/utils'
 
 const enclave = useEnclaveStore()
 const enCours = ref(false)
+const erreur = ref<string | null>(null)
+const suppression = ref<string | null>(null)
+
+/**
+ * Supprime un orphelin. Action HUMAINE : la réconciliation signale, elle ne
+ * corrige jamais d'elle-même.
+ *
+ * L'agent refuse de retirer un compte dont le dossier de travail n'est pas
+ * vide. Le dépôt « sorties » est conservé : il peut contenir des résultats
+ * qui attendent une validation.
+ */
+async function supprimerOrphelin(username: string) {
+  const sur = window.confirm(
+    [
+      `Supprimer le compte Samba orphelin ${username} ?`,
+      '',
+      "Le compte est retiré du serveur de fichiers. L'opération est refusée "
+      + 'si son dossier de travail contient des fichiers.',
+      '',
+      'Son dépôt « sorties » est conservé : il peut contenir des résultats '
+      + 'en attente de validation.',
+    ].join('\n'),
+  )
+  if (!sur) return
+
+  erreur.value = null
+  suppression.value = username
+  try {
+    await api.supprimerOrphelin(username)
+    await enclave.chargerReconciliation()
+  } catch (e) {
+    erreur.value = (e as Error).message
+  } finally {
+    suppression.value = null
+  }
+}
 
 async function relancer() {
   enCours.value = true
@@ -20,8 +57,8 @@ onMounted(relancer)
 
 <template>
   <div class="vue">
-    <p v-if="enclave.erreur" class="message message--erreur" role="alert">
-      {{ enclave.erreur }}
+    <p v-if="erreur || enclave.erreur" class="message message--erreur" role="alert">
+      {{ erreur || enclave.erreur }}
     </p>
 
     <section class="intro">
@@ -81,12 +118,21 @@ onMounted(relancer)
           </p>
           <table v-else class="tableau">
             <thead>
-              <tr><th>Identifiant</th><th>Mot de passe posé le</th></tr>
+              <tr><th>Identifiant</th><th>Mot de passe posé le</th><th></th></tr>
             </thead>
             <tbody>
               <tr v-for="o in enclave.reconciliation.orphelins" :key="o.username">
                 <td class="mono">{{ o.username }}</td>
                 <td class="mono">{{ dateCourte(o.mdp_pose_le) }}</td>
+                <td class="actions">
+                  <button
+                    type="button" class="btn btn--danger btn--petit"
+                    :disabled="suppression === o.username"
+                    @click="supprimerOrphelin(o.username)"
+                  >
+                    {{ suppression === o.username ? 'Suppression…' : 'Supprimer' }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -165,6 +211,8 @@ onMounted(relancer)
 }
 
 .ecart { color: $alerte; font-weight: 500; }
+
+.actions { text-align: right; white-space: nowrap; }
 
 .liste {
   display: flex;

@@ -17,6 +17,7 @@ const liens = [
   { nom: 'sorties', libelle: 'Circuit de sortie' },
   { nom: 'second-facteur', libelle: 'Second facteur' },
   { nom: 'reconciliation', libelle: 'Réconciliation' },
+  { nom: 'administrateurs', libelle: 'Administrateurs' },
   { nom: 'journal', libelle: "Journal d'audit" },
 ]
 
@@ -35,7 +36,7 @@ async function deconnecter() {
     <aside class="barre">
       <div class="barre__marque">
         <img src="/logo.png" alt="INSTAD — Institut de la Statistique de Djibouti" />
-        <p class="barre__sous-titre">Enclave sécurisée</p>
+        <p class="barre__sous-titre">Console</p>
       </div>
 
       <nav class="barre__nav">

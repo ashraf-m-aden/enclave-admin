@@ -62,6 +62,18 @@ export const api = {
 
   moi: () => appeler<{ administrateur: Administrateur }>('/moi'),
 
+  // Administrateurs
+  administrateurs: () => appeler<{ administrateurs: Administrateur[] }>('/administrateurs'),
+
+  creerAdministrateur: (identifiant: string, nom: string, motDePasse: string) =>
+    appeler<{ administrateur: Administrateur }>('/administrateurs', {
+      method: 'POST', body: JSON.stringify({ identifiant, nom, motDePasse }),
+    }),
+
+  supprimerAdministrateur: (identifiant: string) =>
+    appeler<{ ok: true }>(`/administrateurs/${encodeURIComponent(identifiant)}`,
+      { method: 'DELETE' }),
+
   // Accès chercheurs
   acces: () => appeler<{ acces: Acces[] }>('/acces'),
 
@@ -85,6 +97,11 @@ export const api = {
       }),
 
   reconciliation: () => appeler<{ rapport: Reconciliation }>('/reconciliation'),
+
+  /** Supprime un orphelin. Action humaine : la réconciliation ne fait que signaler. */
+  supprimerOrphelin: (identifiant: string) =>
+    appeler<{ ok: true }>(`/reconciliation/orphelin/${encodeURIComponent(identifiant)}`,
+      { method: 'DELETE' }),
 
   // Sessions
   sessions: () => appeler<{ sessions: Session[] }>('/sessions'),

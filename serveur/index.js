@@ -22,7 +22,8 @@ const provisionnement = require(path.join(ORCHESTRATEUR, 'provisionnement'));
 const pve = require(path.join(ORCHESTRATEUR, 'proxmox'));
 const session = require(path.join(ORCHESTRATEUR, 'session'));
 
-const { connecter, garde, lireComptes } = require('./auth');
+const { connecter, garde, lireComptes, creerAdministrateur,
+        supprimerAdministrateur } = require('./auth');
 const journal = require('./journal');
 const reenrolement = require('./reenrolement');
 const applications = require('./applications');
@@ -82,6 +83,62 @@ app.post('/api/deconnexion', garde, route(async (req, res) => {
 
 app.get('/api/moi', garde, route(async (req, res) => {
   res.json({ administrateur: { identifiant: req.administrateur.identifiant, nom: req.administrateur.nom } });
+}));
+
+// ---------------------------------------------------------------------------
+// Administrateurs
+//
+// Créer un second compte n'est pas un confort : le double contrôle de la
+// réinitialisation du second facteur (§ 21) ne s'applique que si deux
+// administrateurs existent.
+// ---------------------------------------------------------------------------
+
+app.get('/api/administrateurs', garde, route(async (req, res) => {
+  const comptes = lireComptes();
+  res.json({
+    administrateurs: Object.entries(comptes).map(([identifiant, c]) => ({
+      identifiant, nom: c.nom, cree_le: c.cree_le,
+      // L'empreinte n'est jamais renvoyée.
+    })).sort((a, b) => a.identifiant.localeCompare(b.identifiant)),
+  });
+}));
+
+app.post('/api/administrateurs', garde, route(async (req, res) => {
+  const { identifiant, nom, motDePasse } = req.body || {};
+  if (!identifiant || !motDePasse) {
+    return res.status(400).json({ erreur: 'identifiant et mot de passe requis' });
+  }
+  if (!/^[a-z_][a-z0-9_.-]{0,30}$/.test(identifiant)) {
+    return res.status(400).json({ erreur: 'identifiant invalide (minuscules, chiffres, . _ -)' });
+  }
+  if (String(motDePasse).length < 12) {
+    return res.status(400).json({ erreur: 'mot de passe trop court (12 caractères minimum)' });
+  }
+
+  const existait = !!lireComptes()[identifiant];
+  const c = creerAdministrateur(identifiant, motDePasse, nom);
+  journal.consigner(req, existait ? 'admin-mot-de-passe-change' : 'admin-cree', { compte: identifiant });
+  res.json({ administrateur: { identifiant: c.identifiant, nom: c.nom } });
+}));
+
+app.delete('/api/administrateurs/:identifiant', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+  // Se supprimer soi-même fermerait la porte derrière soi.
+  if (identifiant === req.administrateur.identifiant) {
+    return res.status(409).json({ erreur: 'vous ne pouvez pas supprimer votre propre compte' });
+  }
+  // Le dernier administrateur ne peut pas disparaître : plus personne
+  // n'administrerait l'enclave.
+  if (Object.keys(lireComptes()).length <= 1) {
+    return res.status(409).json({ erreur: 'le dernier compte d’administration ne peut pas être supprimé' });
+  }
+  try {
+    supprimerAdministrateur(identifiant);
+  } catch (e) {
+    return res.status(404).json({ erreur: e.message });
+  }
+  journal.consigner(req, 'admin-supprime', { compte: identifiant });
+  res.json({ ok: true });
 }));
 
 // ---------------------------------------------------------------------------
@@ -192,6 +249,35 @@ app.patch('/api/acces/:identifiant/application', garde, route(async (req, res) =
 app.get('/api/reconciliation', garde, route(async (req, res) => {
   const rapport = await provisionnement.reconcilier();
   res.json({ rapport });
+}));
+
+/**
+ * Supprime un orphelin — un compte Samba inconnu du registre.
+ *
+ * C'est une action HUMAINE, jamais automatique : une suppression déclenchée
+ * sur fausse détection effacerait un accès légitime. L'agent refuse de retirer
+ * un compte dont le dossier de travail n'est pas vide ; le dépôt « sorties »,
+ * lui, est conservé — il peut contenir des résultats en attente de validation.
+ */
+app.delete('/api/reconciliation/orphelin/:identifiant', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+
+  // Un accès enregistré n'est PAS un orphelin : on refuse de le traiter ici.
+  if (provisionnement.enregistrement(identifiant)) {
+    return res.status(409).json({
+      erreur: "ce compte est enregistré : ce n'est pas un orphelin. "
+            + 'Utilisez la révocation depuis « Accès chercheurs ».',
+    });
+  }
+
+  try {
+    await provisionnement.appelerAgent({ action: 'retirer', username: identifiant });
+  } catch (e) {
+    journal.consignerEchec(req, 'orphelin-supprime', e.message, { identifiant });
+    return res.status(409).json({ erreur: e.message });
+  }
+  journal.consigner(req, 'orphelin-supprime', { identifiant });
+  res.json({ ok: true });
 }));
 
 // ---------------------------------------------------------------------------
