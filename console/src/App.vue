@@ -15,6 +15,7 @@ const liens = [
   { nom: 'acces', libelle: 'Accès chercheurs' },
   { nom: 'sessions', libelle: 'Sessions en cours' },
   { nom: 'sorties', libelle: 'Circuit de sortie' },
+  { nom: 'second-facteur', libelle: 'Second facteur' },
   { nom: 'reconciliation', libelle: 'Réconciliation' },
   { nom: 'journal', libelle: "Journal d'audit" },
 ]

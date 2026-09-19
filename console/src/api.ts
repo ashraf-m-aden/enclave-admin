@@ -8,8 +8,8 @@
  */
 
 import type {
-  Acces, Administrateur, Espace, EvenementJournal, Fichier, Infrastructure,
-  Reconciliation, Session,
+  Acces, Administrateur, DemandeReenrolement, Espace, EvenementJournal, Fichier,
+  Infrastructure, Reconciliation, Session,
 } from '@/types'
 
 export class ErreurApi extends Error {
@@ -95,6 +95,28 @@ export const api = {
    */
   urlFichier: (identifiant: string, espace: Espace, fichier: string) =>
     `/api/fichiers/${encodeURIComponent(identifiant)}/${espace}/${encodeURIComponent(fichier)}`,
+
+  // Réinitialisation du second facteur
+  reenrolements: () =>
+    appeler<{ demandes: DemandeReenrolement[]; double_controle: boolean }>('/reenrolement'),
+
+  demanderReenrolement: (identifiant: string, motif: string) =>
+    appeler<{ demande: DemandeReenrolement }>('/reenrolement', {
+      method: 'POST', body: JSON.stringify({ identifiant, motif }),
+    }),
+
+  approuverReenrolement: (identifiant: string) =>
+    appeler<{ demande: DemandeReenrolement }>(
+      `/reenrolement/${encodeURIComponent(identifiant)}/approuver`, { method: 'POST' }),
+
+  annulerReenrolement: (identifiant: string) =>
+    appeler<{ ok: true }>(`/reenrolement/${encodeURIComponent(identifiant)}`, { method: 'DELETE' }),
+
+  marquerNotifie: (identifiant: string, canal: string) =>
+    appeler<{ demande: DemandeReenrolement }>(
+      `/reenrolement/${encodeURIComponent(identifiant)}/notifie`, {
+        method: 'POST', body: JSON.stringify({ canal }),
+      }),
 
   // Supervision
   infrastructure: () => appeler<Infrastructure>('/infrastructure'),

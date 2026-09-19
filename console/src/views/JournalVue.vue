@@ -25,6 +25,10 @@ const libelles: Record<string, string> = {
   'fermeture-session-forcee': 'Fermeture forcée de session',
   'recuperation-fichier': "Récupération d'un fichier",
   'consultation-travaux': "Consultation de l'espace privé",
+  'reinitialisation-demandee': 'Réinitialisation demandée',
+  'reinitialisation-second-facteur': 'RÉINITIALISATION DU SECOND FACTEUR',
+  'reinitialisation-annulee': 'Réinitialisation annulée',
+  'chercheur-notifie': 'Chercheur notifié',
 }
 
 function libelle(action: string) {

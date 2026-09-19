@@ -7,6 +7,7 @@ const routes = [
   { path: '/tableau-de-bord', name: 'tableau-de-bord', component: () => import('@/views/TableauBordVue.vue'), meta: { titre: 'Tableau de bord' } },
   { path: '/acces', name: 'acces', component: () => import('@/views/AccesVue.vue'), meta: { titre: 'Accès chercheurs' } },
   { path: '/sessions', name: 'sessions', component: () => import('@/views/SessionsVue.vue'), meta: { titre: 'Sessions en cours' } },
+  { path: '/second-facteur', name: 'second-facteur', component: () => import('@/views/SecondFacteurVue.vue'), meta: { titre: 'Second facteur' } },
   { path: '/reconciliation', name: 'reconciliation', component: () => import('@/views/ReconciliationVue.vue'), meta: { titre: 'Réconciliation' } },
   { path: '/sorties', name: 'sorties', component: () => import('@/views/SortiesVue.vue'), meta: { titre: 'Circuit de sortie' } },
   { path: '/journal', name: 'journal', component: () => import('@/views/JournalVue.vue'), meta: { titre: "Journal d'audit" } },

@@ -80,3 +80,29 @@ export interface Fichier {
 }
 
 export type Espace = 'sorties' | 'travaux'
+
+/**
+ * Demande de réinitialisation du second facteur d'un chercheur.
+ *
+ * Le secret TOTP n'apparaît jamais ici : la console ne le voit pas. Elle
+ * reçoit seulement un ticket, à transmettre au chercheur hors bande.
+ */
+export interface DemandeReenrolement {
+  identifiant: string
+  motif: string | null
+  demande_par: string
+  demande_le: string
+  /** `en-attente` tant qu'un second administrateur n'a pas approuvé. */
+  etat: 'en-attente' | 'ticket-emis'
+  double_controle: boolean
+  approuve_par?: string | null
+  approuve_le?: string
+  /** Émis seulement après approbation. À dicter au chercheur. */
+  ticket?: string
+  expire_le?: string
+  /** Le chercheur a-t-il été prévenu, hors bande ? */
+  notifie?: boolean
+  notifie_par?: string
+  canal?: string | null
+  etat_ticket?: { utilise: boolean; expire: boolean; expire_le: string } | null
+}

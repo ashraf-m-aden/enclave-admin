@@ -115,7 +115,7 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
   }
 }
 
-.pastille--ok      { color: darken($ok, 8%);     background: $ok-bg; }
+.pastille--ok      { color: #0e8c22;     background: $ok-bg; }
 .pastille--alerte  { color: $alerte;             background: $alerte-bg; }
 .pastille--danger  { color: $danger;             background: $danger-bg; }
 .pastille--neutre  { color: $ink-3;              background: $rule-soft; }
@@ -163,8 +163,8 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
   border-left: 3px solid;
   font-size: 13px;
 
-  &--erreur { background: $danger-bg; border-color: $danger; color: darken($danger, 12%); }
-  &--succes { background: $ok-bg;     border-color: $ok;     color: darken($ok, 14%); }
+  &--erreur { background: $danger-bg; border-color: $danger; color: #b30019; }
+  &--succes { background: $ok-bg;     border-color: $ok;     color: #0b7a1d; }
   &--info   { background: $blue-100;  border-color: $blue-600; color: $blue-800; }
   &--alerte { background: $alerte-bg; border-color: $alerte; color: $alerte; }
 }

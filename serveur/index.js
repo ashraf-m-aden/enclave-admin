@@ -24,6 +24,7 @@ const session = require(path.join(ORCHESTRATEUR, 'session'));
 
 const { connecter, garde, lireComptes } = require('./auth');
 const journal = require('./journal');
+const reenrolement = require('./reenrolement');
 
 const app = express();
 app.set('trust proxy', 'loopback');   // Nginx pose X-Forwarded-For
@@ -264,6 +265,82 @@ app.get('/api/fichiers/:identifiant/:espace/:fichier', garde, route(async (req, 
   res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(r.fichier)}"`);
   res.set('Content-Length', String(contenu.length));
   res.send(contenu);
+}));
+
+
+// ---------------------------------------------------------------------------
+// Réinitialisation du second facteur
+//
+// Le second facteur est la dernière barrière qui empêche un administrateur
+// d'usurper un compte chercheur : il peut déjà changer un mot de passe, mais
+// il reste bloqué devant le code. Cette opération lui donne donc un pouvoir
+// réel — d'où le double contrôle, le ticket daté et la notification.
+//
+// La console ne lit ni n'écrit jamais le secret TOTP : elle appelle une route
+// du portail qui invalide et rend un ticket.
+// ---------------------------------------------------------------------------
+
+app.get('/api/reenrolement', garde, route(async (req, res) => {
+  res.json({
+    demandes: await reenrolement.lister(),
+    double_controle: reenrolement.doubleControleApplicable(),
+  });
+}));
+
+/** Premier temps : demander. Exécuté aussitôt s'il n'y a qu'un administrateur. */
+app.post('/api/reenrolement', garde, route(async (req, res) => {
+  const { identifiant, motif } = req.body || {};
+  if (!identifiant) return res.status(400).json({ erreur: 'identifiant requis' });
+
+  try {
+    const d = await reenrolement.demander(identifiant, req.administrateur.identifiant, motif);
+    journal.consigner(req, d.etat === 'ticket-emis'
+      ? 'reinitialisation-second-facteur' : 'reinitialisation-demandee',
+      { identifiant, motif: motif || null, double_controle: d.double_controle });
+    res.json({ demande: d });
+  } catch (e) {
+    journal.consignerEchec(req, 'reinitialisation-demandee', e.message, { identifiant });
+    res.status(409).json({ erreur: e.message });
+  }
+}));
+
+/** Second temps : approuver. Un AUTRE administrateur, jamais le demandeur. */
+app.post('/api/reenrolement/:identifiant/approuver', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+  try {
+    const d = await reenrolement.approuver(identifiant, req.administrateur.identifiant);
+    journal.consigner(req, 'reinitialisation-second-facteur', {
+      identifiant, demande_par: d.demande_par, approuve_par: d.approuve_par,
+    });
+    res.json({ demande: d });
+  } catch (e) {
+    journal.consignerEchec(req, 'reinitialisation-approuvee', e.message, { identifiant });
+    res.status(409).json({ erreur: e.message });
+  }
+}));
+
+app.delete('/api/reenrolement/:identifiant', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+  try {
+    reenrolement.annuler(identifiant);
+    journal.consigner(req, 'reinitialisation-annulee', { identifiant });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(409).json({ erreur: e.message });
+  }
+}));
+
+/** Consigne la notification hors bande du chercheur, et par quel canal. */
+app.post('/api/reenrolement/:identifiant/notifie', garde, route(async (req, res) => {
+  const { identifiant } = req.params;
+  const { canal } = req.body || {};
+  try {
+    const d = reenrolement.marquerNotifie(identifiant, req.administrateur.identifiant, canal);
+    journal.consigner(req, 'chercheur-notifie', { identifiant, canal: canal || null });
+    res.json({ demande: d });
+  } catch (e) {
+    res.status(409).json({ erreur: e.message });
+  }
 }));
 
 // ---------------------------------------------------------------------------
