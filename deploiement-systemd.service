@@ -1,0 +1,28 @@
+[Unit]
+Description=Console d'administration de l'enclave securisee
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=passerelle
+WorkingDirectory=/opt/enclave/admin
+# Le .env porte le jeton Proxmox et la cle du jeton Guacamole.
+EnvironmentFile=/opt/enclave/orchestrateur/.env
+# ADMIN_SECRET signe les cookies de session. Il DOIT etre fixe ici : sans lui
+# il est regenere a chaque demarrage et toutes les sessions tombent.
+EnvironmentFile=/opt/enclave/admin/admin.env
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=5
+
+# Durcissement : la console n'a besoin d'ecrire que dans son dossier d'etat.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/enclave/admin/etat
+ReadOnlyPaths=/opt/enclave/orchestrateur
+
+[Install]
+WantedBy=multi-user.target

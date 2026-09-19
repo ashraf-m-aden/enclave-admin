@@ -1,0 +1,39 @@
+# =============================================================================
+#  Console d'administration de l'enclave — déploiement
+#
+#  L'image ne contient AUCUN secret. Tout ce qui est sensible est monté ou
+#  injecté à l'exécution : jeton Proxmox, clés SSH des agents, ADMIN_SECRET.
+# =============================================================================
+services:
+  admin:
+    image: nejishow/enclave-admin:latest
+    container_name: enclave-admin
+    restart: unless-stopped
+
+    environment:
+      ADMIN_PORT: 8090
+      # Signature des cookies de session. DOIT être fixe : régénéré à chaque
+      # démarrage, toutes les sessions d'administration tomberaient.
+      ADMIN_SECRET: ${ADMIN_SECRET:?definir ADMIN_SECRET dans .env}
+      PROXMOX_TOKEN: ${PROXMOX_TOKEN:?definir PROXMOX_TOKEN}
+      PROXMOX_URL: ${PROXMOX_URL:-https://10.0.20.1:8006/api2/json}
+      VMID_MODELE: ${VMID_MODELE:-9002}
+      # Dette du prototype : certificat Proxmox auto-signé.
+      NODE_TLS_REJECT_UNAUTHORIZED: ${NODE_TLS_REJECT_UNAUTHORIZED:-1}
+
+    volumes:
+      # Registre des accès et journal d'audit : doivent survivre au conteneur.
+      - ./etat:/app/etat
+      # L'orchestrateur, en LECTURE SEULE : la console l'utilise, ne le modifie pas.
+      - /opt/enclave/orchestrateur/services:/opt/enclave/orchestrateur/services:ro
+      - /opt/enclave/orchestrateur/etat:/opt/enclave/orchestrateur/etat
+      # Clés des agents contraints, en lecture seule.
+      - ${CLES_SSH:-~/.ssh}:/home/enclave/.ssh:ro
+
+    # Exposé sur la boucle locale seulement : Nginx fait face au réseau et
+    # restreint par IP (voir deploiement-nginx.conf).
+    ports:
+      - "127.0.0.1:8090:8090"
+
+    security_opt:
+      - no-new-privileges:true

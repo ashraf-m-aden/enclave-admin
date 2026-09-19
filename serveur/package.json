@@ -1,0 +1,15 @@
+{
+  "name": "enclave-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API de la console d'administration de l'enclave sécurisée",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "creer-admin": "node creer-admin.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "engines": { "node": ">=22" }
+}
